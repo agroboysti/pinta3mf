@@ -9,6 +9,8 @@ const PAGINA = [path.join(__dirname, 'Pinta3MF.html'), path.join(__dirname, '..'
 function criarJanela() {
   const win = new BrowserWindow({ width: 1320, height: 880, minWidth: 900, minHeight: 600, title: 'Pinta3MF', autoHideMenuBar: true, backgroundColor: '#111111' });
   Menu.setApplicationMenu(null);
+  win.on('page-title-updated', e => e.preventDefault());
+  win.setTitle('Pinta3MF v' + app.getVersion());
   win.loadFile(PAGINA);
   // soltar um arquivo fora da área certa não pode navegar para ele
   win.webContents.on('will-navigate', (e, url) => { if (!url.startsWith('file:') || /\.(zip|obj|mtl|png|jpe?g)$/i.test(url)) e.preventDefault(); });
