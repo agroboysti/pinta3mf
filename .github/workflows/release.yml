@@ -41,6 +41,12 @@ jobs:
         shell: bash
         run: npm version "1.0.${{ github.run_number }}" --no-git-tag-version
 
+      - name: Criar a tag da versão
+        shell: bash
+        run: |
+          git tag "v1.0.${{ github.run_number }}"
+          git push origin "v1.0.${{ github.run_number }}"
+
       - name: Montar a página e gerar o instalador
         working-directory: app
         shell: bash
