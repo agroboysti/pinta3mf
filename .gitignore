@@ -1,0 +1,8 @@
+node_modules/
+app/saida/
+app/saida2/
+app/dist-instalador/
+app/Pinta3MF.html
+web/dist/
+*.3mf
+*.log

@@ -1,0 +1,477 @@
+<title>Pinta3MF</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: bancada de trabalho — painel de ajustes à esquerda, mesa de impressão (prévia 3D) dominando à direita, slots de filamento logo abaixo */
+:root {
+  --bg: #E9ECEE;         /* chapa de metal clara */
+  --panel: #F8F9FA;
+  --raised: #FFFFFF;
+  --ink: #16202A;
+  --muted: #5A6672;
+  --line: #CDD3D8;
+  --accent: #0A6B70;     /* petróleo */
+  --accent-ink: #FFFFFF;
+  --accent-soft: #D4EBEC;
+  --warn: #9A5B00;
+  --warn-soft: #FFF1D6;
+  --ok: #2E7D4F;
+  --stage: #DDE1E4;
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --r: 10px;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0E1316; --panel: #151C21; --raised: #1C252C; --ink: #E4EAEE; --muted: #93A0AA; --line: #2B363E;
+  --accent: #4FC2C7; --accent-ink: #062426; --accent-soft: #123538; --warn: #F0B357; --warn-soft: #3A2A10; --ok: #6FCF97; --stage: #11181C; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0E1316; --panel: #151C21; --raised: #1C252C; --ink: #E4EAEE; --muted: #93A0AA; --line: #2B363E;
+  --accent: #4FC2C7; --accent-ink: #062426; --accent-soft: #123538; --warn: #F0B357; --warn-soft: #3A2A10; --ok: #6FCF97; --stage: #11181C; color-scheme: dark }
+
+* { box-sizing: border-box }
+[hidden] { display: none !important }
+body { background: var(--bg); color: var(--ink); font: 15px/1.5 var(--body); }
+.wrap { max-width: 1320px; margin: 0 auto; padding-block: 20px 40px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 18px; }
+header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px; }
+h1 { font: 800 clamp(28px, 4vw, 40px)/1 var(--display); letter-spacing: -0.02em; margin: 0; }
+h1 span { color: var(--accent); }
+.tag { color: var(--muted); margin: 0; max-width: 62ch; text-wrap: balance; }
+.grid { display: grid; grid-template-columns: minmax(0, 330px) minmax(0, 1fr); gap: 18px; align-items: start; }
+@media (max-width: 860px) { .grid { grid-template-columns: minmax(0, 1fr); } .stage { order: -1; } }
+
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 16px; display: grid; gap: 18px; min-width: 0; }
+.sec { display: grid; gap: 10px; }
+.label { font: 600 11px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.drop { border: 1.5px dashed var(--line); border-radius: var(--r); padding: 16px; display: grid; gap: 8px; text-align: left; background: var(--raised); cursor: pointer; transition: border-color .15s, background .15s; }
+.drop:hover, .drop.over { border-color: var(--accent); background: var(--accent-soft); }
+.drop b { font: 600 15px/1.3 var(--display); }
+.drop small { color: var(--muted); }
+.drop:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.file-name { font: 500 13px/1.3 var(--mono); color: var(--ink); overflow-wrap: anywhere; }
+
+.row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px; }
+.row label { font-weight: 500; }
+.row output, .num { font: 600 13px/1 var(--mono); font-variant-numeric: tabular-nums; }
+input[type=range] { width: 100%; accent-color: var(--accent); }
+input[type=number], select { font: 500 14px var(--body); color: var(--ink); background: var(--raised); border: 1px solid var(--line); border-radius: 8px; padding: 7px 9px; }
+input[type=number] { width: 92px; font-family: var(--mono); }
+.check { display: flex; gap: 8px; align-items: flex-start; }
+.check input { margin-top: 4px; accent-color: var(--accent); }
+.hint { color: var(--muted); font-size: 13px; margin: 0; }
+
+.btn { font: 600 15px/1 var(--body); border: 0; border-radius: 9px; padding: 13px 16px; cursor: pointer; background: var(--accent); color: var(--accent-ink); display: inline-flex; gap: 8px; align-items: center; justify-content: center; }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); padding: 8px 12px; font-size: 13px; }
+.note { background: var(--warn-soft); color: var(--ink); border-radius: 8px; padding: 10px 12px; font-size: 13px; }
+.note b { color: var(--warn); }
+
+.stage { display: grid; gap: 12px; min-width: 0; }
+.view { position: relative; background: var(--stage); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; aspect-ratio: 4 / 3; max-width: 100%; }
+@media (max-width: 860px) { .view { aspect-ratio: 1 / 1; } }
+#canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+.hud { position: absolute; left: 12px; top: 12px; right: 12px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; pointer-events: none; }
+.hud > * { pointer-events: auto; }
+.seg { display: inline-flex; background: var(--raised); border: 1px solid var(--line); border-radius: 8px; padding: 3px; gap: 2px; }
+.seg button { font: 600 13px var(--body); border: 0; background: transparent; color: var(--muted); padding: 6px 10px; border-radius: 6px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.dims { font: 500 12px/1.5 var(--mono); background: var(--raised); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; font-variant-numeric: tabular-nums; }
+.dims .bad { color: var(--warn); font-weight: 600; }
+.status { position: absolute; left: 12px; right: 12px; bottom: 12px; background: var(--raised); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; display: grid; gap: 6px; font-size: 13px; }
+.bar { height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; }
+.bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .2s; }
+.nogl { position: absolute; inset: 0; display: grid; place-items: center; padding: 24px; text-align: center; color: var(--muted); margin: 0; }
+.sample-badge { font: 600 11px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; background: var(--warn-soft); color: var(--warn); border-radius: 6px; padding: 6px 8px; align-self: start; }
+
+.ams { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 14px 16px; display: grid; gap: 12px; }
+.ams-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; align-items: baseline; }
+.ams-head h2 { font: 700 18px/1.2 var(--display); margin: 0; }
+.slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(176px, 1fr)); gap: 10px; }
+.slot { background: var(--raised); border: 1px solid var(--line); border-radius: 9px; padding: 10px; display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 4px 10px; align-items: center; }
+.spool { grid-row: span 3; width: 44px; height: 44px; border-radius: 50%; position: relative; border: 1px solid var(--line); overflow: hidden; cursor: pointer; }
+.spool input { position: absolute; inset: -8px; width: 60px; height: 60px; opacity: 0; cursor: pointer; }
+.spool::after { content: ""; position: absolute; inset: 15px; border-radius: 50%; background: var(--raised); border: 1px solid var(--line); pointer-events: none; }
+.slot .n { font: 600 11px/1 var(--mono); color: var(--muted); letter-spacing: .06em; }
+.slot .nm { font-weight: 600; text-transform: capitalize; overflow-wrap: anywhere; }
+.slot .meta { font: 400 12px/1.2 var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+
+details.tones { border-top: 1px solid var(--line); padding-top: 10px; }
+details.tones summary { cursor: pointer; font-weight: 600; }
+.tone-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; margin-top: 10px; }
+.tone { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 8px; align-items: center; background: var(--raised); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; }
+.tone i { width: 22px; height: 22px; border-radius: 5px; border: 1px solid var(--line); }
+.tone span { font: 400 12px/1.3 var(--mono); overflow-wrap: anywhere; }
+.tone select { padding: 4px 6px; font-size: 13px; }
+
+.how { color: var(--muted); font-size: 13px; display: grid; gap: 4px; }
+.how ol { margin: 0; padding-left: 20px; display: grid; gap: 2px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Pinta<span>3MF</span></h1>
+    <p class="tag">Coloque um modelo OBJ com textura e baixe um 3MF que já abre pintado no Bambu Studio ou no OrcaSlicer, um filamento para cada cor.</p>
+  </header>
+
+  <div class="grid">
+    <aside class="panel">
+      <div class="sec">
+        <div class="label">1 · Modelo</div>
+        <label class="drop" id="drop" tabindex="0">
+          <b>Escolher arquivos ou soltar aqui</b>
+          <small>Um .zip com tudo, ou o .obj + .mtl + imagem da textura juntos.</small>
+          <span class="file-name" id="fileName">Exemplo: mago</span>
+          <input id="file" type="file" multiple accept=".zip,.obj,.mtl,.png,.jpg,.jpeg,.webp,.bmp" hidden>
+        </label>
+      </div>
+
+      <div class="sec">
+        <div class="label">2 · Cores</div>
+        <div class="row"><label for="nFil">Filamentos (slots do AMS)</label><output id="nFilOut" class="num">5</output></div>
+        <input id="nFil" type="range" min="1" max="16" value="5">
+        <div class="row"><label for="nTones">Tons a detectar</label><output id="nTonesOut" class="num">12</output></div>
+        <input id="nTones" type="range" min="2" max="16" value="12">
+        <p class="hint">Mais tons separam detalhes pequenos, como a pele do rosto. Tons que são só sombra da mesma cor vão para o mesmo filamento automaticamente.</p>
+        <div class="row"><label for="clean">Remover manchas menores que</label><output id="cleanOut" class="num">4 mm²</output></div>
+        <input id="clean" type="range" min="0" max="40" step="1" value="4">
+      </div>
+
+      <div class="sec">
+        <div class="label">3 · Orientação</div>
+        <!-- altura (100 mm) e impressora (A1) ficam fixas e escondidas: o tamanho se ajusta depois no Bambu Studio -->
+        <div class="row" hidden><label for="height">Altura final</label><span><input id="height" type="number" min="5" max="400" step="1" value="100"> <span class="num">mm</span></span></div>
+        <div class="row" hidden><label for="printer">Impressora</label>
+          <select id="printer">
+            <option value="180,180,180" data-tpl="a1-mini">A1 mini</option>
+            <option value="256,256,256" data-tpl="a1" selected>A1</option>
+            <option value="256,256,256" data-tpl="p1s">P1S</option>
+            <option value="256,256,256" data-tpl="x1c">X1 Carbon</option>
+            <option value="256,256,256">P2S · outra mesa 256 mm</option>
+            <option value="350,320,325">H2D</option>
+            <option value="300,300,300">Mesa 300 mm</option>
+          </select>
+        </div>
+        <label class="check"><input id="yup" type="checkbox" checked><span>O modelo veio deitado (Y para cima, padrão do Blender e de modelos gerados por IA)</span></label>
+      </div>
+
+      <div class="sec">
+        <button class="btn" id="export" disabled>Baixar 3MF pintado</button>
+        <div class="note" id="dlNote" hidden></div>
+      </div>
+
+      <div class="how">
+        <div class="label">No Bambu Studio</div>
+        <ol>
+          <li>Abra o .3mf (Arquivo › Abrir projeto, ou dê dois cliques no arquivo).</li>
+          <li>Os <span id="howN">5</span> filamentos já vêm no projeto, na ordem dos slots abaixo. Se quiser, troque cada um pelo filamento do seu AMS.</li>
+          <li>A pintura aparece no modelo. Ajuste a escala se precisar, fatie e imprima.</li>
+        </ol>
+      </div>
+    </aside>
+
+    <section class="stage">
+      <div class="view">
+        <canvas id="canvas" aria-label="Prévia 3D do modelo pintado"></canvas>
+        <p class="nogl" id="noGL" hidden>A prévia 3D não carregou (sem internet para baixar o visualizador). A conversão e o download funcionam normalmente.</p>
+        <div class="hud">
+          <div class="seg" role="group" aria-label="Modo da prévia">
+            <button id="vPaint" aria-pressed="true">Pintado</button>
+            <button id="vOrig" aria-pressed="false">Textura original</button>
+          </div>
+          <span class="sample-badge" id="sampleBadge">Modelo de exemplo</span>
+          <div class="dims" id="dims">—</div>
+        </div>
+        <div class="status" id="status" hidden><span id="statusText">Preparando…</span><div class="bar"><i id="barFill"></i></div></div>
+      </div>
+
+      <div class="ams">
+        <div class="ams-head">
+          <h2>Filamentos</h2>
+          <span class="hint">Toque na bobina para trocar a cor pela do seu filamento.</span>
+        </div>
+        <div class="slots" id="slots"></div>
+        <details class="tones">
+          <summary>Tons detectados e para qual filamento vai cada um</summary>
+          <div class="tone-list" id="tones"></div>
+        </details>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+/*__CORE__*/
+</script>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const tick = () => new Promise(r => setTimeout(r, 0));
+  const S = { m: null, fc: null, nb: null, centers: null, toneLbl: null, toneRGB: [], toneShare: [], map: [], filRGB: [], filShare: [], lbl: null, name: 'mago', sample: true, view: 'paint' };
+  Core.setLightWeight(0.5);
+
+  // ---------- status ----------
+  function status(text, frac) {
+    $('status').hidden = !text; if (!text) return;
+    $('statusText').textContent = text; $('barFill').style.width = ((frac ?? 0) * 100).toFixed(0) + '%';
+  }
+  const err = msg => { status(msg, 0); $('barFill').style.width = '0'; };
+
+  // ---------- 3D ----------
+  const canvas = $('canvas');
+  let renderer, scene, camera, controls, mesh, grid, needs = true;
+  function initGL() {
+    if (!window.THREE) { canvas.hidden = true; $('noGL').hidden = false; return false; }
+    renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(35, 1, 1, 5000); camera.up.set(0, 0, 1);
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x6b7680, 0.75));
+    const key = new THREE.DirectionalLight(0xffffff, 0.55); key.position.set(-0.4, -1, 1.2); camera.add(key); scene.add(camera);
+    controls = new THREE.OrbitControls(camera, canvas); controls.enableDamping = true; controls.addEventListener('change', () => { needs = true; });
+    new ResizeObserver(() => { const r = canvas.getBoundingClientRect(); renderer.setSize(r.width, r.height, false); camera.aspect = r.width / Math.max(r.height, 1); camera.updateProjectionMatrix(); needs = true; }).observe(canvas);
+    (function loop() { requestAnimationFrame(loop); if (controls.update() || needs) { renderer.render(scene, camera); needs = false; } })();
+    return true;
+  }
+  function bedDims() { return $('printer').value.split(',').map(Number); }
+  function opts() { const b = bedDims(); return { yUp: $('yup').checked, heightMm: +$('height').value || 100, bed: [b[0] / 2, b[1] / 2], name: S.name }; }
+  // projeto completo do Bambu Studio (N filamentos, impressora certa); sem perfil da impressora sai só geometria + pintura
+  const MODELOS = /*__MODELOS__*/{};
+  function bambuOpts(hexes) {
+    const o = opts(), id = $('printer').selectedOptions[0].dataset.tpl, tpl = id && MODELOS[id];
+    if (tpl) o.bambu = { settings: Core.bambuSettings(tpl, hexes) };
+    return o;
+  }
+
+  function buildMesh() {
+    if (!renderer) return;
+    const m = S.m, pl = Core.placement(m, opts()), p = m.pos, fv = m.fv;
+    const pos = new Float32Array(m.nF * 9);
+    for (let f = 0; f < m.nF; f++) for (let k = 0; k < 3; k++) {
+      const v = fv[f * 3 + k], q = pl.tr(p[v * 3], p[v * 3 + 1], p[v * 3 + 2]);
+      pos[f * 9 + k * 3] = q[0] * pl.s + pl.off[0]; pos[f * 9 + k * 3 + 1] = q[1] * pl.s + pl.off[1]; pos[f * 9 + k * 3 + 2] = q[2] * pl.s + pl.off[2];
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    g.setAttribute('color', new THREE.BufferAttribute(new Uint8Array(m.nF * 9), 3, true));
+    g.computeVertexNormals();
+    if (mesh) { scene.remove(mesh); mesh.geometry.dispose(); }
+    mesh = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ vertexColors: true }));
+    scene.add(mesh);
+    const b = bedDims();
+    if (grid) scene.remove(grid);
+    grid = new THREE.Group();
+    const css = getComputedStyle(document.documentElement);
+    const lineCol = new THREE.Color(css.getPropertyValue('--line').trim() || '#999');
+    const gh = new THREE.GridHelper(Math.max(b[0], b[1]), Math.round(Math.max(b[0], b[1]) / 16), lineCol, lineCol);
+    gh.rotation.x = Math.PI / 2; gh.position.set(b[0] / 2, b[1] / 2, 0); grid.add(gh);
+    scene.add(grid);
+    const cz = pl.size[2] / 2, R = Math.max(...pl.size) * 1.9;
+    controls.target.set(b[0] / 2, b[1] / 2, cz);
+    camera.position.set(b[0] / 2 + R * 0.15, b[1] / 2 - R, cz + R * 0.35);
+    camera.near = R / 100; camera.far = R * 20; camera.updateProjectionMatrix();
+    paintMesh(); updateDims(pl);
+  }
+  function updateDims(pl) {
+    pl = pl || Core.placement(S.m, opts());
+    const b = bedDims(), s = pl.size, fits = s[0] <= b[0] && s[1] <= b[1] && s[2] <= b[2];
+    $('dims').innerHTML = `${s[0].toFixed(0)} × ${s[1].toFixed(0)} × ${s[2].toFixed(0)} mm<br>${S.m.nF.toLocaleString('pt-BR')} triângulos` + (fits ? '' : `<br><span class="bad">Não cabe na mesa ${b.join(' × ')}</span>`);
+  }
+  function paintMesh() {
+    if (!mesh) return;
+    const col = mesh.geometry.attributes.color.array, n = S.m.nF;
+    if (S.view === 'orig') { const rgb = S.fc.rgb; for (let f = 0; f < n; f++) for (let k = 0; k < 3; k++) { col[f * 9 + k * 3] = rgb[f * 3]; col[f * 9 + k * 3 + 1] = rgb[f * 3 + 1]; col[f * 9 + k * 3 + 2] = rgb[f * 3 + 2]; } }
+    else { const pal = S.filRGB, l = S.lbl; for (let f = 0; f < n; f++) { const c = pal[l[f]]; for (let k = 0; k < 3; k++) { col[f * 9 + k * 3] = c[0]; col[f * 9 + k * 3 + 1] = c[1]; col[f * 9 + k * 3 + 2] = c[2]; } } }
+    mesh.geometry.attributes.color.needsUpdate = true; needs = true;
+  }
+
+  // ---------- pipeline ----------
+  async function analyze(m, texByMat, kdByMat) {
+    S.m = m;
+    status('Lendo as cores da textura…', 0.1);
+    S.fc = await Core.faceColors(m, texByMat, kdByMat, f => status('Lendo as cores da textura…', 0.1 + f * 0.4));
+    status('Ligando triângulos vizinhos…', 0.55); await tick();
+    S.nb = Core.buildNeighbors(m);
+    await detect();
+    status('Montando a prévia 3D…', 0.9); await tick();
+    buildMesh(); if (!renderer) updateDims();
+    status(''); $('export').disabled = false;
+  }
+  async function detect() {
+    status('Detectando os tons…', 0.65); await tick();
+    const T = +$('nTones').value;
+    S.centers = Core.palette(S.fc.lab, S.fc.area, S.m.nF, T);
+    const t = S.centers.length / 3;
+    S.toneLbl = Core.assign(S.fc.lab, S.m.nF, S.centers);
+    const g = Core.groupColors(S.fc.rgb, S.fc.area, S.toneLbl, t);
+    S.toneRGB = g.colors; S.toneShare = g.share;
+    suggest();
+    await finalize();
+  }
+  function suggest() {
+    const N = Math.min(+$('nFil').value, S.toneRGB.length);
+    const sug = Core.suggestFilaments(S.centers, S.toneShare, N);
+    S.map = sug.map; S.filRGB = sug.repTone.map(j => S.toneRGB[j].map(Math.round));
+  }
+  async function finalize() {
+    status('Limpando manchas…', 0.8); await tick();
+    const nFil = S.filRGB.length;
+    let lbl = new Uint8Array(S.m.nF); for (let f = 0; f < S.m.nF; f++) lbl[f] = S.map[S.toneLbl[f]];
+    const pl = Core.placement(S.m, opts()), minA = (+$('clean').value) / (pl.s * pl.s);
+    S.lbl = Core.cleanLabels(lbl, S.nb, S.fc.area, nFil, 4, minA);
+    S.filShare = Core.groupColors(S.fc.rgb, S.fc.area, S.lbl, nFil).share;
+    renderSlots(); renderTones(); paintMesh(); status('');
+  }
+
+  // ---------- UI de filamentos ----------
+  function renderSlots() {
+    const box = $('slots'); box.textContent = '';
+    $('howN').textContent = S.filRGB.length;
+    S.filRGB.forEach((c, j) => {
+      const el = document.createElement('div'); el.className = 'slot';
+      const hex = Core.hex(c);
+      el.innerHTML = `<label class="spool" style="background:${hex}" title="Trocar cor"><input type="color" id="fil${j}" value="${hex.toLowerCase()}" aria-label="Cor do filamento ${j + 1}"></label>
+        <span class="n">SLOT ${j + 1}</span><span class="nm">${Core.nomeCor(c)}</span><span class="meta">${hex} · ${(S.filShare[j] * 100).toFixed(1)}%</span>`;
+      const inp = el.querySelector('input');
+      inp.addEventListener('input', () => {
+        S.filRGB[j] = Core.hexToRgb(inp.value.toUpperCase()); el.querySelector('.spool').style.background = inp.value;
+        el.querySelector('.nm').textContent = Core.nomeCor(S.filRGB[j]);
+        el.querySelector('.meta').textContent = `${inp.value.toUpperCase()} · ${(S.filShare[j] * 100).toFixed(1)}%`;
+        renderTones(); paintMesh();
+      });
+      box.appendChild(el);
+    });
+  }
+  function renderTones() {
+    const box = $('tones'); box.textContent = '';
+    S.toneRGB.forEach((c, j) => {
+      const el = document.createElement('div'); el.className = 'tone';
+      const o = S.filRGB.map((fc, k) => `<option value="${k}" ${S.map[j] === k ? 'selected' : ''}>Slot ${k + 1} · ${Core.nomeCor(fc)}</option>`).join('');
+      el.innerHTML = `<i style="background:${Core.hex(c)}"></i><span>${Core.hex(c)} · ${(S.toneShare[j] * 100).toFixed(1)}%</span><select id="tone${j}" aria-label="Filamento do tom ${j + 1}">${o}</select>`;
+      el.querySelector('select').addEventListener('change', e => { S.map[j] = +e.target.value; finalize(); });
+      box.appendChild(el);
+    });
+  }
+
+  // ---------- leitura de arquivos ----------
+  const IMG = /\.(png|jpe?g|webp|bmp)$/i;
+  async function decodeTexture(blob) {
+    const MAX = 4096;
+    let bmp;
+    try { bmp = await createImageBitmap(blob); } catch (e) { throw new Error('Não consegui abrir a imagem da textura (' + (e.message || e) + ').'); }
+    const sc = Math.min(1, MAX / Math.max(bmp.width, bmp.height));
+    const w = Math.max(1, Math.round(bmp.width * sc)), h = Math.max(1, Math.round(bmp.height * sc));
+    const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+    const ctx = cv.getContext('2d', { willReadFrequently: true }); ctx.drawImage(bmp, 0, 0, w, h); bmp.close && bmp.close();
+    return { w, h, data: ctx.getImageData(0, 0, w, h).data };
+  }
+  const base = n => n.replace(/\\/g, '/').split('/').pop().toLowerCase();
+
+  async function loadFiles(list, exemplo = false) {
+    try {
+      $('export').disabled = true; $('dlNote').hidden = true;
+      status('Abrindo arquivos…', 0.02); await tick();
+      // junta tudo num dicionário nome -> Uint8Array|Blob
+      const files = new Map(); let zipName = null;
+      for (const f of list) {
+        if (/\.zip$/i.test(f.name)) {
+          status('Descompactando ' + f.name + '…', 0.03); await tick(); zipName = zipName || f.name.replace(/\.zip$/i, '');
+          const u8 = new Uint8Array(await f.arrayBuffer());
+          // primeiro só .obj/.mtl; as imagens depois de saber qual textura o .mtl usa
+          const first = await Core.unzip(u8, n => /\.(obj|mtl)$/i.test(n) && !/__MACOSX/.test(n));
+          for (const [n, d] of Object.entries(first)) files.set(base(n), d);
+          const wanted = new Set();
+          for (const [n, d] of files) if (n.endsWith('.mtl')) for (const mt of Object.values(Core.parseMTL(new TextDecoder().decode(d)))) if (mt.map) wanted.add(mt.map.toLowerCase());
+          const imgs = await Core.unzip(u8, n => IMG.test(n) && !/__MACOSX/.test(n) && (wanted.has(base(n)) || (!wanted.size && !/normal|rough|metal|spec|height|bump|_ao|occlusion|emiss/i.test(n))));
+          for (const [n, d] of Object.entries(imgs)) files.set(base(n), new Blob([d]));
+        } else files.set(base(f.name), /\.(obj|mtl)$/i.test(f.name) ? new Uint8Array(await f.arrayBuffer()) : f);
+      }
+      const objName = [...files.keys()].find(n => n.endsWith('.obj'));
+      if (!objName) { err('Não achei nenhum .obj. Envie o .zip completo ou selecione o .obj junto com o .mtl e a textura.'); return; }
+      S.name = zipName || objName.replace(/\.obj$/i, ''); S.sample = !!exemplo;
+      $('fileName').textContent = exemplo ? 'Exemplo: mago' : (zipName ? zipName + '.zip' : objName) + ' · ' + files.size + ' arquivo' + (files.size > 1 ? 's' : ''); $('sampleBadge').hidden = !exemplo;
+      if (!touched) { setCtl('nFil', 5); setCtl('nTones', 12); $('height').value = 100; }
+
+      status('Lendo o OBJ…', 0.05); await tick();
+      const m = await Core.parseOBJ(files.get(objName), f => status('Lendo o OBJ… ' + Math.round(f * 100) + '%', 0.05 + f * 0.25));
+      if (!m.nF) { err('O OBJ não tem triângulos.'); return; }
+      files.delete(objName);
+
+      // materiais
+      let mats = {};
+      for (const lib of m.mtllibs) { const d = files.get(base(lib)); if (d) mats = { ...mats, ...Core.parseMTL(new TextDecoder().decode(d)) }; }
+      if (!Object.keys(mats).length) for (const [n, d] of files) if (n.endsWith('.mtl')) mats = { ...mats, ...Core.parseMTL(new TextDecoder().decode(d)) };
+      const imgNames = [...files.keys()].filter(n => IMG.test(n));
+      const guess = imgNames.find(n => /base|albedo|diffuse|color|colour|_d\./i.test(n)) || imgNames.find(n => !/normal|rough|metal|spec|height|bump|_ao|occlusion|emiss/i.test(n));
+      const texCache = new Map(), texByMat = [], kdByMat = [];
+      let missing = [];
+      for (const mn of m.matNames) {
+        const mt = mats[mn];
+        let tn = mt && mt.map ? mt.map.toLowerCase() : null;
+        if (tn && !files.has(tn)) { missing.push(mt.map); tn = null; }
+        if (!tn && (!mt || mt.map) && guess && m.uv.length) tn = guess; // sem .mtl ou textura com outro nome: usa a imagem de cor
+        if (tn && !texCache.has(tn)) { status('Abrindo a textura ' + tn + '…', 0.32); await tick(); texCache.set(tn, await decodeTexture(files.get(tn))); }
+        texByMat.push(tn ? texCache.get(tn) : null); kdByMat.push(mt ? mt.kd : null);
+      }
+      if (!texCache.size && !m.vcol) $('dlNote').hidden = false, $('dlNote').innerHTML = '<b>Sem textura.</b> Não encontrei imagem de cor nem cor por vértice, então só as cores dos materiais (Kd) serão usadas.' + (missing.length ? ' Faltou: ' + missing.join(', ') : '');
+      files.clear();
+      await analyze(m, texByMat, kdByMat);
+    } catch (e) { console.error(e); err('Erro: ' + (e.message || e)); }
+  }
+
+  // ---------- exportação ----------
+  // dentro do Claude o download passa pela permissão da página; fora dele (arquivo .html aberto no navegador) é um download normal
+  const dlP = (window.claude && window.claude.use) ? window.claude.use('downloads').catch(() => null) : Promise.resolve(null);
+  async function exportar() {
+    const btn = $('export'); btn.disabled = true; $('dlNote').hidden = true;
+    try {
+      const hexes = S.filRGB.map(c => Core.hex(c));
+      const blob = await Core.make3MF(S.m, S.lbl, hexes, bambuOpts(hexes), f => status('Gerando o 3MF… ' + Math.round(f * 100) + '%', f * 0.97));
+      const fname = (S.name || 'modelo').replace(/[^\w\-]+/g, '_') + '_pintado';
+      status('');
+      const dl = await dlP;
+      if (dl) {
+        try {
+          await dl.save({ filename: fname + '.3mf.zip', data: blob });
+          note(`<b>Salvo como ${fname}.3mf.zip.</b> Renomeie o arquivo apagando o “.zip” do final, deixando <code>${fname}.3mf</code>, e abra no Bambu Studio. O navegador do Claude não deixa salvar com a extensão .3mf direto.`);
+        } catch (e) { if (e && e.code !== 'declined') note('<b>Não foi possível salvar.</b> ' + (e.message || e.code)); }
+      } else if (window.claude) {
+        note('<b>O download não está liberado nesta visualização.</b> Abra a página pelo claude.ai ou use a versão .html no seu navegador.');
+      } else {
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = fname + '.3mf';
+        document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+        note(`<b>Pronto:</b> ${fname}.3mf (${(blob.size / 1e6).toFixed(1)} MB). Abra no Bambu Studio.`);
+      }
+    } catch (e) { console.error(e); err('Erro ao gerar o 3MF: ' + (e.message || e)); }
+    btn.disabled = false;
+  }
+  function note(html) { const n = $('dlNote'); n.innerHTML = html; n.hidden = false; }
+
+  // ---------- eventos ----------
+  const drop = $('drop'), file = $('file');
+  drop.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); file.click(); } });
+  file.addEventListener('change', () => { if (file.files.length) loadFiles([...file.files]); file.value = ''; });
+  ['dragenter', 'dragover'].forEach(t => document.addEventListener(t, e => { e.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach(t => document.addEventListener(t, e => { e.preventDefault(); if (t === 'drop' || e.target === document.documentElement) drop.classList.remove('over'); }));
+  document.addEventListener('drop', e => { if (e.dataTransfer.files.length) loadFiles([...e.dataTransfer.files]); });
+  let touched = false;
+  const setCtl = (id, v) => { $(id).value = v; $(id + 'Out').textContent = v; };
+  const bindRange = (id, fmt, fn) => { const el = $(id), out = $(id + 'Out'); let t; el.addEventListener('input', () => { touched = true; out.textContent = fmt(el.value); clearTimeout(t); t = setTimeout(() => S.m && fn(), 250); }); };
+  bindRange('nFil', v => v, () => { suggest(); finalize(); });
+  bindRange('nTones', v => v, () => detect());
+  bindRange('clean', v => v + ' mm²', () => finalize());
+  ['height', 'printer', 'yup'].forEach(id => $(id).addEventListener('change', () => { touched = touched || id === 'height'; if (!S.m) return; buildMesh(); if (!renderer) updateDims(); if (id !== 'yup') finalize(); }));
+  $('export').addEventListener('click', exportar);
+  const setView = v => { S.view = v; $('vPaint').setAttribute('aria-pressed', v === 'paint'); $('vOrig').setAttribute('aria-pressed', v === 'orig'); paintMesh(); };
+  $('vPaint').addEventListener('click', () => setView('paint')); $('vOrig').addEventListener('click', () => setView('orig'));
+
+  // ---------- modelo de exemplo: o mago (web/exemplo/mago.zip, embutido pelo build.py) ----------
+  const EXEMPLO = '/*__EXEMPLO__*/';
+  initGL();
+  if (EXEMPLO.length > 100) loadFiles([new File([Uint8Array.from(atob(EXEMPLO), c => c.charCodeAt(0))], 'mago.zip')], true);
+})();
+</script>

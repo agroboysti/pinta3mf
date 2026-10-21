@@ -1,0 +1,45 @@
+{
+  "name": "pinta3mf-app",
+  "version": "1.0.0",
+  "description": "Pinta3MF: OBJ com textura -> 3MF pintado para o Bambu Studio",
+  "author": "Lucas3d",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "empacotar": "python ../web/build.py && node empacotar.js",
+    "instalador": "python ../web/build.py && node preparar.js && electron-builder --win nsis --publish never",
+    "publicar": "python ../web/build.py && node preparar.js && electron-builder --win nsis --publish always"
+  },
+  "devDependencies": {
+    "@electron/packager": "^20.3.0",
+    "electron": "^44.8.0",
+    "electron-builder": "^26.15.3"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.9"
+  },
+  "build": {
+    "appId": "br.com.lucas3d.pinta3mf",
+    "productName": "Pinta3MF",
+    "artifactName": "Pinta3MF-Setup-${version}.${ext}",
+    "directories": { "output": "dist-instalador" },
+    "files": ["main.js", "Pinta3MF.html", "package.json"],
+    "win": {
+      "target": [{ "target": "nsis", "arch": ["x64"] }],
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": false,
+      "deleteAppDataOnUninstall": false,
+      "runAfterFinish": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Pinta3MF"
+    },
+    "publish": [
+      { "provider": "github", "owner": "agroboysti", "repo": "pinta3mf", "releaseType": "release" }
+    ]
+  }
+}

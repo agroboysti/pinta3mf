@@ -1,0 +1,50 @@
+name: Release
+
+# Todo push na branch main gera um instalador novo e publica como Release no GitHub.
+# O app instalado consulta esses Releases e se atualiza sozinho.
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Instalar dependências do app
+        working-directory: app
+        run: npm ci
+
+      - name: Definir versão (1.0.<número da execução>)
+        working-directory: app
+        shell: bash
+        run: npm version "1.0.${{ github.run_number }}" --no-git-tag-version
+
+      - name: Montar a página e gerar o instalador
+        working-directory: app
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: npm run publicar
