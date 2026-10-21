@@ -7,8 +7,7 @@
   "scripts": {
     "start": "electron .",
     "empacotar": "python ../web/build.py && node empacotar.js",
-    "instalador": "python ../web/build.py && node preparar.js && electron-builder --win nsis --publish never",
-    "publicar": "python ../web/build.py && node preparar.js && electron-builder --win nsis --publish always"
+    "instalador": "python ../web/build.py && node preparar.js && electron-builder --win nsis --publish never"
   },
   "devDependencies": {
     "@electron/packager": "^20.3.0",

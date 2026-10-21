@@ -41,16 +41,20 @@ jobs:
         shell: bash
         run: npm version "1.0.${{ github.run_number }}" --no-git-tag-version
 
-      - name: Criar a tag da versão
-        shell: bash
-        run: |
-          git tag "v1.0.${{ github.run_number }}"
-          git push origin "v1.0.${{ github.run_number }}"
-
       - name: Montar a página e gerar o instalador
         working-directory: app
         shell: bash
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-        run: npm run publicar
+        run: npm run instalador
+
+      # latest.yml é o arquivo que o app instalado consulta para saber se há versão nova
+      - name: Publicar o Release
+        working-directory: app
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          V="1.0.${{ github.run_number }}"
+          gh release create "v$V" "dist-instalador/Pinta3MF-Setup-$V.exe" "dist-instalador/Pinta3MF-Setup-$V.exe.blockmap" dist-instalador/latest.yml \
+            --target "${{ github.sha }}" --title "Pinta3MF $V" --notes "Instalador do Pinta3MF $V. Quem já tem o programa instalado recebe esta versão automaticamente."
