@@ -32,6 +32,15 @@ Hoje o usuário pinta manualmente no Bambu Studio porque ele só recebe STL (sem
 - `app/` — app de janela (Electron 44 + @electron/packager). `cd app; npm run empacotar` gera `app/saida/Pinta3MF-win32-x64/Pinta3MF.exe`
   (pasta portátil de ~370 MB). Salva com o diálogo nativo e oferece "Abrir no Bambu Studio". `npm start` roda sem empacotar.
   Testado via DevTools (`--remote-debugging-port`): carrega o Santa, gera o 3MF e o Bambu reexporta com as 5 cores e a pintura.
+- **Instalador + atualização automática** (repo público https://github.com/agroboysti/pinta3mf, Releases em `/releases`):
+  todo `git push` na branch `main` roda `.github/workflows/release.yml` (windows-latest): monta a página (`web/build.py`),
+  gera o instalador NSIS com electron-builder (`app/package.json` › `build`), versão `1.0.<número da execução>` e publica
+  `Pinta3MF-Setup-<v>.exe` + `.blockmap` + `latest.yml` com `gh release create` (NÃO usar `--publish always` do electron-builder:
+  publica duas vezes em paralelo e perde arquivos). `app/main.js` usa `electron-updater`: ao abrir (só empacotado) consulta o
+  `latest.yml`, baixa em segundo plano, pergunta "Reiniciar e atualizar" e instala ao fechar se escolher "Depois".
+  Instalação por usuário em `%LOCALAPPDATA%\Programs\pinta3mf-app`. Sem assinatura de código (SmartScreen avisa na 1ª instalação).
+  Testado: instalada a 1.0.3, ela baixou a 1.0.4 sozinha. Local: `cd app; npm run instalador` → `app/dist-instalador`.
+  Commits no repo usam o e-mail noreply do GitHub. Só `.md` alterado não gera release (`paths-ignore`).
 - `extras/pintar_auto.py` — primeira versão em Python (gera OBJ com materiais por cor). Não é mais o caminho principal.
 - `testes/verificar_3mf.py` — confere um .3mf (zip, contagem por filamento, tamanho em mm). Só biblioteca padrão.
 
